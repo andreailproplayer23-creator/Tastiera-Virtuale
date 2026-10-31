@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TouchBoard Remote - NextGen Glass</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- PeerJS per WebRTC P2P -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Sfondo Mesh Animato -->
+    <div class="ambient-background">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div id="app">
+        <!-- Selezione Ruolo -->
+        <div id="role-selector" class="card glass-card fade-in">
+            <div class="brand-logo">✨</div>
+            <h1>TouchBoard Remote</h1>
+            <p>Trasforma qualsiasi smartphone o tablet in un controller e tastiera wireless ad alte prestazioni.</p>
+            <div class="button-group">
+                <button id="btn-select-host" class="btn primary-glow">
+                    <span>🖥️ Questo è il PC (Ricevitore)</span>
+                </button>
+                <button id="btn-select-client" class="btn secondary-glass">
+                    <span>📱 Questo è il Tablet (Controller)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Schermata HOST (PC) -->
+        <div id="host-view" class="card glass-card hidden">
+            <div class="badge-tag">MODALITÀ PC</div>
+            <h2>Ricevitore Attivo</h2>
+            <p>Scansiona il QR Code o inserisci il codice sul tablet per connetterti immediatamente:</p>
+            
+            <div class="room-code-box pulse-border">
+                <span id="room-code-display">----</span>
+            </div>
+
+            <div class="qr-wrapper">
+                <div id="qrcode"></div>
+            </div>
+
+            <div id="host-status" class="status-badge waiting">
+                <span class="status-dot-pulse"></span>
+                <span id="host-status-text">In attesa del tablet...</span>
+            </div>
+
+            <div class="test-area">
+                <div class="test-area-header">
+                    <label for="live-input">Area Scrittura in Tempo Reale</label>
+                    <div class="text-actions">
+                        <button id="btn-copy-text" class="small-btn">📋 Copia</button>
+                        <button id="btn-clear-text" class="small-btn danger">🗑️ Pulisci</button>
+                    </div>
+                </div>
+                <textarea id="live-input" placeholder="I tasti digitati dal tablet appariranno qui in tempo reale..."></textarea>
+            </div>
+
+            <button id="btn-back-host" class="btn text-btn">← Torna al Menu</button>
+        </div>
+
+        <!-- Schermata CLIENT (TABLET SETUP) -->
+        <div id="client-view" class="card glass-card hidden">
+            <div class="badge-tag">MODALITÀ CONTROLLER</div>
+            <h2>Connettiti al PC</h2>
+            <p>Inserisci le 4 cifre visibili sullo schermo del tuo PC:</p>
+            <div class="connect-form">
+                <input type="text" id="join-code-input" placeholder="0000" maxlength="4" autocomplete="off" inputmode="numeric">
+                <button id="btn-connect" class="btn primary-glow">Connetti Ora 🚀</button>
+            </div>
+            <div id="client-status" class="status-badge error hidden"></div>
+            <button id="btn-back-client" class="btn text-btn">← Torna al Menu</button>
+        </div>
+
+        <!-- Layout Tastiera / Trackpad (TABLET) -->
+        <div id="keyboard-view" class="hidden fade-in">
+            <div class="keyboard-header glass-card">
+                <div class="keyboard-status">
+                    <span class="status-dot-active"></span>
+                    <span class="status-text">Connesso al PC</span>
+                </div>
+                
+                <!-- Tab Mode Switcher -->
+                <div class="mode-tabs">
+                    <button id="tab-keyboard" class="tab-btn active">⌨️ Tastiera</button>
+                    <button id="tab-trackpad" class="tab-btn">🖱️ Trackpad</button>
+                </div>
+
+                <div class="keyboard-controls">
+                    <button id="btn-toggle-sound" class="icon-btn" title="Audio Feedback">🔊</button>
+                    <button id="btn-disconnect" class="btn danger-btn">Disconnetti</button>
+                </div>
+            </div>
+
+            <!-- MODALITÀ TASTIERA -->
+            <div id="panel-keyboard" class="keyboard-container glass-card">
+                <!-- Quick Shortcuts Bar -->
+                <div class="shortcuts-bar">
+                    <button class="shortcut-btn" data-shortcut="select-all">Select All</button>
+                    <button class="shortcut-btn" data-shortcut="copy">Copy</button>
+                    <button class="shortcut-btn" data-shortcut="paste">Paste</button>
+                    <button class="shortcut-btn" data-shortcut="undo">Undo</button>
+                    <button class="shortcut-btn" data-shortcut="desktop">Desktop</button>
+                </div>
+
+                <!-- Row F-Keys -->
+                <div class="keyboard-row f-keys">
+                    <button class="key fn" data-key="Escape">Esc</button>
+                    <button class="key fn" data-key="F1">F1</button>
+                    <button class="key fn" data-key="F2">F2</button>
+                    <button class="key fn" data-key="F3">F3</button>
+                    <button class="key fn" data-key="F4">F4</button>
+                    <button class="key fn" data-key="F5">F5</button>
+                    <button class="key fn" data-key="F6">F6</button>
+                    <button class="key fn" data-key="F7">F7</button>
+                    <button class="key fn" data-key="F8">F8</button>
+                    <button class="key fn" data-key="F9">F9</button>
+                    <button class="key fn" data-key="F10">F10</button>
+                    <button class="key fn" data-key="F11">F11</button>
+                    <button class="key fn" data-key="F12">F12</button>
+                </div>
+
+                <!-- Numbers Row -->
+                <div class="keyboard-row">
+                    <button class="key" data-key="\`">\`</button>
+                    <button class="key" data-key="1">1</button>
+                    <button class="key" data-key="2">2</button>
+                    <button class="key" data-key="3">3</button>
+                    <button class="key" data-key="4">4</button>
+                    <button class="key" data-key="5">5</button>
+                    <button class="key" data-key="6">6</button>
+                    <button class="key" data-key="7">7</button>
+                    <button class="key" data-key="8">8</button>
+                    <button class="key" data-key="9">9</button>
+                    <button class="key" data-key="0">0</button>
+                    <button class="key" data-key="-">-</button>
+                    <button class="key" data-key="=">=</button>
+                    <button class="key backspace wide-2" data-key="Backspace">⌫ Delete</button>
+                </div>
+
+                <!-- QWERTY Row -->
+                <div class="keyboard-row">
+                    <button class="key tab wide-1-5" data-key="Tab">Tab ↹</button>
+                    <button class="key" data-key="q">Q</button>
+                    <button class="key" data-key="w">W</button>
+                    <button class="key" data-key="e">E</button>
+                    <button class="key" data-key="r">R</button>
+                    <button class="key" data-key="t">T</button>
+                    <button class="key" data-key="y">Y</button>
+                    <button class="key" data-key="u">U</button>
+                    <button class="key" data-key="i">I</button>
+                    <button class="key" data-key="o">O</button>
+                    <button class="key" data-key="p">P</button>
+                    <button class="key" data-key="[">[</button>
+                    <button class="key" data-key="]">]</button>
+                    <button class="key wide-1-5" data-key="\">\</button>
+                </div>
+
+                <!-- ASDF Row -->
+                <div class="keyboard-row">
+                    <button class="key caps wide-1-75" data-key="CapsLock" id="caps-key">Caps ⇪</button>
+                    <button class="key" data-key="a">A</button>
+                    <button class="key" data-key="s">S</button>
+                    <button class="key" data-key="d">D</button>
+                    <button class="key" data-key="f">F</button>
+                    <button class="key" data-key="g">G</button>
+                    <button class="key" data-key="h">H</button>
+                    <button class="key" data-key="j">J</button>
+                    <button class="key" data-key="k">K</button>
+                    <button class="key" data-key="l">L</button>
+                    <button class="key" data-key=";">;</button>
+                    <button class="key" data-key="'">'</button>
+                    <button class="key enter wide-2-25" data-key="Enter">Enter ↵</button>
+                </div>
+
+                <!-- ZXCV Row -->
+                <div class="keyboard-row">
+                    <button class="key shift wide-2-25" data-key="Shift" id="shift-left">Shift ⇧</button>
+                    <button class="key" data-key="z">Z</button>
+                    <button class="key" data-key="x">X</button>
+                    <button class="key" data-key="c">C</button>
+                    <button class="key" data-key="v">V</button>
+                    <button class="key" data-key="b">B</button>
+                    <button class="key" data-key="n">N</button>
+                    <button class="key" data-key="m">M</button>
+                    <button class="key" data-key=",">,</button>
+                    <button class="key" data-key=".">.</button>
+                    <button class="key" data-key="/">/</button>
+                    <button class="key shift wide-2-75" data-key="Shift" id="shift-right">Shift ⇧</button>
+                </div>
+
+                <!-- Bottom Row & Arrows -->
+                <div class="keyboard-row">
+                    <button class="key modifier" data-key="Control">Ctrl</button>
+                    <button class="key modifier" data-key="Alt">Alt</button>
+                    <button class="key modifier" data-key="Meta">Cmd / ⊞</button>
+                    <button class="key space" data-key=" ">Spazio</button>
+                    <button class="key modifier" data-key="AltGraph">AltGr</button>
+                    <button class="key arrow" data-key="ArrowLeft">◄</button>
+                    <div class="arrow-stack">
+                        <button class="key arrow half-height" data-key="ArrowUp">▲</button>
+                        <button class="key arrow half-height" data-key="ArrowDown">▼</button>
+                    </div>
+                    <button class="key arrow" data-key="ArrowRight">►</button>
+                </div>
+            </div>
+
+            <!-- MODALITÀ TRACKPAD (MOUSE REMOTE) -->
+            <div id="panel-trackpad" class="trackpad-container glass-card hidden">
+                <div id="trackpad-area">
+                    <div class="trackpad-hint">Trascina qui il dito per simulare lo scorrimento / cursore</div>
+                </div>
+                <div class="trackpad-buttons">
+                    <button id="btn-mouse-left" class="mouse-btn">Click Sinistro</button>
+                    <button id="btn-mouse-right" class="mouse-btn">Click Destro</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
